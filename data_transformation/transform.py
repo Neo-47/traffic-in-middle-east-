@@ -1,5 +1,7 @@
 from settings import *
 
+
+@task(log_prints=True)
 def extract_from_gcs(dataset_name: str, dataset_file: str) -> Path:
     """Downlod traffic data from GCS"""
 
@@ -9,6 +11,7 @@ def extract_from_gcs(dataset_name: str, dataset_file: str) -> Path:
     
     return Path(f"datalake/{gcs_path}")
 
+@task(log_prints=True)
 def write_bq(df: object) -> None:
     """Write data to BigQuery"""
 
@@ -18,40 +21,32 @@ def write_bq(df: object) -> None:
     df.to_gbq(destination_table="traffic_project.transformed_jams",
               project_id="stately-planet-407118",
               chunksize=500_000,
-              credentials=gcp_credentials_block.get_credentials_from_service_account())
+              credentials=gcp_credentials_block.get_credentials_from_service_account(),
+              if_exists='replace')
 
+@task(log_prints=True)
+def schema_transform(data_path: str) -> pd.DataFrame:
 
-def schema_transform(spark: object, schema: object, data_path: str) -> object:
+      
+    df = pd.read_parquet(data_path)
+    df['Datetime']= pd.to_datetime(df['Datetime'])
+    print(df.head(5))
+    print(df.dtypes)
+
+    return df
+
+@flow(name='data_transformation')
+def transform_main():
     
     
-    new_df = spark.read \
-        .option("header", "true") \
-        .schema(schema) \
-        .parquet(data_path)
-        
-    print("New schema is: ", new_df.schema)
-
-    return new_df    
-
-    
-def tansform_main():
-    
-    schema = SCHEMA
     dataset_name = DATASET_NAME
     dataset_file = DATASET_FILE
-    
-    spark = SparkSession.builder \
-                        .master("local[*]") \
-                        .appName('traffic_project') \
-                        .getOrCreate()
-    
-    data_path = extract_from_gcs(dataset_name, dataset_file)           
-    df = schema_transform(spark, schema, str(data_path))
-    print(type(df))
-    dfc = df.toPandas()
-    #write_bq(df)
+                  
+    data_path = extract_from_gcs(dataset_name, dataset_file)  
+    df = schema_transform(str(data_path))
+    write_bq(df)
     
 
 
 if __name__ == "__main__":
-    tansform_main()
+    transform_main()
