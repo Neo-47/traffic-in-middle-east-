@@ -8,7 +8,7 @@ def fetch(dataset_url: str, dataset_file: str, dataset_name: str, path: str) -> 
     df = pd.read_csv(f"{path}/{dataset_name}/{dataset_file}.csv")
     
     return df
- 
+  
 
 @task(log_prints=True)
 def clean(df: pd.DataFrame) -> pd.DataFrame:

@@ -26,8 +26,7 @@ def write_bq(df: pd.DataFrame) -> None:
     df.to_gbq(destination_table="traffic_project.jams",
               project_id="stately-planet-407118",
               chunksize=500_000,
-              credentials=gcp_credentials_block.get_credentials_from_service_account(),
-              if_exists="append")
+              credentials=gcp_credentials_block.get_credentials_from_service_account())
 
 
 
